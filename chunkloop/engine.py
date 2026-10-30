@@ -130,10 +130,9 @@ class Engine:
                 passed = {dep: state.blocks[dep].content for dep in block.depends_on}
                 began = time.monotonic()
                 try:
-                    content = await asyncio.wait_for(
-                        self.writer.generate(block, context, scoped, passed, feedback),
-                        self.policy.call_timeout_seconds,
-                    )
+                    call = self.writer.generate(block, context, scoped, passed, feedback)
+                    content = (await asyncio.wait_for(call, self.policy.call_timeout_seconds)
+                               if self.policy.call_timeout_seconds is not None else await call)
                     await results.put(("written", block_id, version, content,
                                        time.monotonic() - began))
                 except Exception as exc:
@@ -149,10 +148,9 @@ class Engine:
                 scoped = {key: evidence[key] for key in block.evidence_ids}
                 began = time.monotonic()
                 try:
-                    review = await asyncio.wait_for(
-                        self.reviewer.review(block, content, context, scoped),
-                        self.policy.call_timeout_seconds,
-                    )
+                    call = self.reviewer.review(block, content, context, scoped)
+                    review = (await asyncio.wait_for(call, self.policy.call_timeout_seconds)
+                              if self.policy.call_timeout_seconds is not None else await call)
                     if not isinstance(review, Review):
                         raise TypeError("reviewer must return Review")
                     await results.put(("reviewed", block_id, version, review,
@@ -245,7 +243,8 @@ class Engine:
             try:
                 decision = self.final_reviewer(output, context, evidence)
                 if inspect.isawaitable(decision):
-                    decision = await asyncio.wait_for(decision, self.policy.call_timeout_seconds)
+                    decision = (await asyncio.wait_for(decision, self.policy.call_timeout_seconds)
+                                if self.policy.call_timeout_seconds is not None else await decision)
                 if not isinstance(decision, Review):
                     raise TypeError("final reviewer must return Review")
             except Exception as exc:

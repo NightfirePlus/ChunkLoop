@@ -68,12 +68,12 @@ class Policy:
     max_rewrites: int = 2
     writer_workers: int = 1
     reviewer_workers: int = 1
-    call_timeout_seconds: float = 120.0
+    call_timeout_seconds: float | None = None
 
     def validate(self) -> None:
         if self.max_rewrites < 0 or self.writer_workers < 1 or self.reviewer_workers < 1:
             raise ValueError("invalid retry or worker count")
-        if self.call_timeout_seconds <= 0:
+        if self.call_timeout_seconds is not None and self.call_timeout_seconds <= 0:
             raise ValueError("call timeout must be positive")
 
 

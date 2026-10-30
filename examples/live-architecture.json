@@ -1,0 +1,18 @@
+{
+  "context": {
+    "task": "为开发者逐条简述给定的ChunkLoop设计事实，每块一至两句，只使用本块证据。",
+    "language": "zh-CN"
+  },
+  "evidence": {
+    "F1": "Plan会检查Block ID唯一、依赖块存在且依赖关系无环。",
+    "F2": "写作与审核分别在独立队列中运行，默认各有一个工作者。",
+    "F3": "审核返回结构化Issue；未通过的块携带问题重写，超出重写上限后阻断。",
+    "F4": "JSON检查点使用临时文件加原子替换保存，恢复时可保留已通过的块。"
+  },
+  "blocks": [
+    {"id": "plan", "instruction": "准确介绍计划校验", "evidence_ids": ["F1"]},
+    {"id": "queues", "instruction": "准确介绍两条队列", "evidence_ids": ["F2"]},
+    {"id": "review", "instruction": "准确介绍审核回流", "evidence_ids": ["F3"]},
+    {"id": "resume", "instruction": "准确介绍检查点恢复", "evidence_ids": ["F4"]}
+  ]
+}

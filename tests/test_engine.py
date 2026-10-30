@@ -31,6 +31,9 @@ class FlakyReviewer:
 
 
 class EngineTests(unittest.IsolatedAsyncioTestCase):
+    def test_calls_have_no_default_timeout(self):
+        self.assertIsNone(Policy().call_timeout_seconds)
+
     async def test_overlap_rewrite_dependency_and_evidence_scope(self):
         plan = Plan((Block("a", "first", evidence_ids=("F1",)),
                      Block("b", "independent", evidence_ids=("F2",)),

@@ -11,7 +11,7 @@ from pathlib import Path
 from .adapters import ChatClient, ModelFinalReviewer, ModelPlanner, ModelReviewer, ModelWriter
 from .demo import DemoReviewer, DemoWriter
 from .engine import Engine
-from .models import Block, Plan
+from .models import Block, Plan, Policy
 from .storage import JsonCheckpoint
 
 
@@ -31,9 +31,9 @@ async def execute(args: argparse.Namespace) -> dict:
         writer, reviewer, final = DemoWriter(), DemoReviewer(), None
     else:
         spec = args.spec
-        writer = ModelWriter(ChatClient.from_env("writer"))
-        reviewer = ModelReviewer(ChatClient.from_env("reviewer"))
-        final = ModelFinalReviewer(ChatClient.from_env("reviewer"))
+        writer = ModelWriter(ChatClient.from_env("writer", timeout=args.call_timeout))
+        reviewer = ModelReviewer(ChatClient.from_env("reviewer", timeout=args.call_timeout))
+        final = ModelFinalReviewer(ChatClient.from_env("reviewer", timeout=args.call_timeout))
     plan, context, evidence = load_spec(spec)
     checkpoint = JsonCheckpoint(args.checkpoint) if args.checkpoint else None
     if plan is None:
@@ -42,11 +42,12 @@ async def execute(args: argparse.Namespace) -> dict:
         if args.resume and checkpoint:
             plan = checkpoint.load_plan()
         else:
-            plan = await ModelPlanner(ChatClient.from_env("planner")).plan(context, evidence)
+            plan = await ModelPlanner(ChatClient.from_env("planner", timeout=args.call_timeout)).plan(context, evidence)
     def event_sink(event: dict) -> None:
         print(json.dumps(event, ensure_ascii=False), file=sys.stderr, flush=True)
 
     engine = Engine(writer, reviewer, final_reviewer=final,
+                    policy=Policy(call_timeout_seconds=args.call_timeout),
                     assembler=lambda parts: "\n\n".join(parts),
                     on_event=event_sink if args.events else None)
     result = await engine.run(plan, context, evidence,
@@ -67,6 +68,8 @@ def main() -> None:
                         help="reuse unchanged blocks when the specification has changed")
     parser.add_argument("--invalidate", help="comma-separated block IDs to regenerate with dependents")
     parser.add_argument("--events", action="store_true", help="stream JSON events on stderr")
+    parser.add_argument("--call-timeout", type=float,
+                        help="optional per-model-call timeout in seconds (default: unlimited)")
     args = parser.parse_args()
     if args.command == "run" and args.spec is None:
         parser.error("run requires a specification JSON path")
@@ -76,6 +79,8 @@ def main() -> None:
         parser.error("--invalidate requires --resume")
     if args.rebase and not args.resume:
         parser.error("--rebase requires --resume")
+    if args.call_timeout is not None and args.call_timeout <= 0:
+        parser.error("--call-timeout must be positive")
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")

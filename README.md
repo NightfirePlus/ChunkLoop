@@ -35,10 +35,12 @@ $env:CHUNKLOOP_API_KEY = '<your-key>'
 $env:CHUNKLOOP_WRITER_MODEL = 'writer-model'
 $env:CHUNKLOOP_REVIEWER_MODEL = 'reviewer-model'
 $env:CHUNKLOOP_PLANNER_MODEL = 'planner-model' # 仅自动规划时需要
+$env:CHUNKLOOP_PLANNER_ENABLE_THINKING = 'false' # 端点支持时可缩短结构化规划耗时
+$env:CHUNKLOOP_REVIEWER_ENABLE_THINKING = 'false'
 & '.\.conda\envs\ChunkLoop\python.exe' -m chunkloop.cli run examples/basic.json --checkpoint data/run.json
 ```
 
-中断后加 `--resume`；只重做某块及其下游时加 `--resume --invalidate design`。`--invalidate` 用逗号分隔多个块 ID。修改规格中的指令或证据后加 `--resume --rebase`，它会比较旧检查点的输入清单，只复用未变化的块。通用 `context` 变化会让全部块失效。`--events` 将实时事件以 JSON 行输出到标准错误流。不要将凭证写入规格文件或提交到仓库。模型端点需要支持 `/chat/completions` 和 JSON 对象响应格式。
+中断后加 `--resume`；只重做某块及其下游时加 `--resume --invalidate design`。`--invalidate` 用逗号分隔多个块 ID。修改规格中的指令或证据后加 `--resume --rebase`，它会比较旧检查点的输入清单，只复用未变化的块。通用 `context` 变化会让全部块失效。`--events` 将实时事件以 JSON 行输出到标准错误流。单次模型调用默认不设时限；生产部署可按需要用 `--call-timeout` 设置。不要将凭证写入规格文件或提交到仓库。模型端点需要支持 `/chat/completions` 和 JSON 对象响应格式。
 
 ### 嵌入 Python
 
@@ -60,4 +62,4 @@ print(result.status, result.output)
 
 ChunkLoop 管理任务状态和证据分配，不判断证据本身是否可信，也不保证模型审核没有漏检。生产使用时应由调用方提供可信证据、确定性规则和发布前审批。模型适配器只把证据作为数据传入提示词；具体模型的可靠性需要按任务评估。
 
-详见 [架构与状态契约](docs/architecture.md)、[验证方法](docs/validation.md)。项目代码遵循 [Apache-2.0](LICENSE)；保留原项目历史和许可来源。
+详见 [架构与状态契约](docs/architecture.md)、[验证方法](docs/validation.md)及[真实模型验证记录](docs/real-model-validation-2026-10-30.md)。项目代码遵循 [Apache-2.0](LICENSE)；保留原项目历史和许可来源。
