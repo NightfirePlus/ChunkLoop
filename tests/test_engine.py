@@ -58,7 +58,8 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
             async def review(self, *args):
                 return Review((Issue("bad", "reject"),))
 
-        result = await Engine(DemoWriter(0), Reject(), policy=Policy(max_rewrites=1)).run(
+        result = await Engine(DemoWriter(0), Reject(),
+                              policy=Policy(max_rewrites=1, review_gate="strict")).run(
             Plan((Block("a", "x"),)), {}, {})
         self.assertEqual(result.status, "blocked")
         self.assertIsNone(result.output)
@@ -89,10 +90,30 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         async def reject(*args):
             return Review((Issue("contradiction", "conflicting claims"),))
 
-        result = await Engine(DemoWriter(0), DemoReviewer(0), final_reviewer=reject).run(
+        result = await Engine(DemoWriter(0), DemoReviewer(0), final_reviewer=reject,
+                              policy=Policy(review_gate="strict")).run(
             Plan((Block("a", "x"),)), {}, {})
         self.assertEqual(result.status, "blocked")
         self.assertEqual(result.error, "final review failed")
+
+    async def test_default_review_is_advisory_and_retains_output(self):
+        class Reject:
+            async def review(self, *args):
+                return Review((Issue("suggestion", "consider rewriting"),))
+
+        async def final_findings(*args):
+            return Review((Issue("repetition", "similar wording"),))
+
+        plan = Plan((Block("a", "first"), Block("b", "depends on a", ("a",))))
+        result = await Engine(DemoWriter(0), Reject(),
+                              policy=Policy(max_rewrites=0),
+                              final_reviewer=final_findings).run(plan, {}, {})
+        self.assertEqual(result.status, "needs_review")
+        self.assertEqual([state.status for state in result.state.blocks.values()],
+                         ["needs_review", "needs_review"])
+        self.assertEqual(len(result.output), 2)
+        self.assertEqual(result.final_review.issues[0].code, "repetition")
+        self.assertFalse(result.error)
 
     async def test_invalidation_rebuilds_only_changed_blocks_and_descendants(self):
         plan = Plan((Block("a", "first"), Block("b", "unrelated"),

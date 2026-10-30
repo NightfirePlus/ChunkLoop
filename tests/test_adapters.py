@@ -33,6 +33,6 @@ class AdapterTests(unittest.IsolatedAsyncioTestCase):
         writer_calls = [payload for system, payload in client.calls if "Write only" in system]
         self.assertEqual(writer_calls[0]["allowed_evidence"], {"F1": "verified statement"})
         self.assertEqual(writer_calls[1]["allowed_evidence"], {})
-        self.assertEqual(writer_calls[1]["passed_dependencies"],
+        self.assertEqual(writer_calls[1]["dependency_drafts"],
                          {"opening": "supported result"})
         self.assertEqual(result.metrics["reviewed"], 2)

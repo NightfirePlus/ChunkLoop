@@ -49,12 +49,12 @@ async def measure(mode: str, plan, context, evidence, base: str, key: str,
                     passed[block.id] = content
                     break
                 if attempt == 2:
-                    status = "blocked"
+                    status = "needs_review"
+                    outputs.append(content)
+                    passed[block.id] = content
                     break
                 feedback = review.issues
                 rewrites += 1
-            if status == "blocked":
-                break
         metrics = {"written": written, "reviewed": reviewed, "rewrites": rewrites}
     elapsed = time.perf_counter() - started
     return {"status": status, "wall_seconds": round(elapsed, 3), "metrics": metrics,

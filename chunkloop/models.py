@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, asdict
-from typing import Any
+from typing import Any, Literal
 
 
 @dataclass(frozen=True)
@@ -69,12 +69,15 @@ class Policy:
     writer_workers: int = 1
     reviewer_workers: int = 1
     call_timeout_seconds: float | None = None
+    review_gate: Literal["advisory", "strict"] = "advisory"
 
     def validate(self) -> None:
         if self.max_rewrites < 0 or self.writer_workers < 1 or self.reviewer_workers < 1:
             raise ValueError("invalid retry or worker count")
         if self.call_timeout_seconds is not None and self.call_timeout_seconds <= 0:
             raise ValueError("call timeout must be positive")
+        if self.review_gate not in {"advisory", "strict"}:
+            raise ValueError("review gate must be advisory or strict")
 
 
 @dataclass
@@ -137,3 +140,4 @@ class RunResult:
     output: Any = None
     error: str = ""
     metrics: dict[str, Any] = field(default_factory=dict)
+    final_review: Review | None = None

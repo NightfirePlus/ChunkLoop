@@ -47,7 +47,8 @@ async def execute(args: argparse.Namespace) -> dict:
         print(json.dumps(event, ensure_ascii=False), file=sys.stderr, flush=True)
 
     engine = Engine(writer, reviewer, final_reviewer=final,
-                    policy=Policy(call_timeout_seconds=args.call_timeout),
+                    policy=Policy(call_timeout_seconds=args.call_timeout,
+                                  review_gate="strict" if args.strict_review else "advisory"),
                     assembler=lambda parts: "\n\n".join(parts),
                     on_event=event_sink if args.events else None)
     result = await engine.run(plan, context, evidence,
@@ -55,7 +56,10 @@ async def execute(args: argparse.Namespace) -> dict:
                               invalidate=set(args.invalidate.split(",")) if args.invalidate else None,
                               rebase=args.rebase)
     return {"status": result.status, "plan": asdict(plan), "output": result.output,
-            "error": result.error, "metrics": result.metrics}
+            "error": result.error, "metrics": result.metrics,
+            "final_review": asdict(result.final_review) if result.final_review else None,
+            "block_findings": {block_id: [asdict(issue) for issue in state.issues]
+                               for block_id, state in result.state.blocks.items() if state.issues}}
 
 
 def main() -> None:
@@ -68,6 +72,8 @@ def main() -> None:
                         help="reuse unchanged blocks when the specification has changed")
     parser.add_argument("--invalidate", help="comma-separated block IDs to regenerate with dependents")
     parser.add_argument("--events", action="store_true", help="stream JSON events on stderr")
+    parser.add_argument("--strict-review", action="store_true",
+                        help="treat unresolved model review findings as blocking")
     parser.add_argument("--call-timeout", type=float,
                         help="optional per-model-call timeout in seconds (default: unlimited)")
     args = parser.parse_args()
@@ -89,7 +95,7 @@ def main() -> None:
     except (ValueError, OSError, KeyError) as exc:
         parser.exit(2, f"chunkloop: {exc}\n")
     print(json.dumps(result, ensure_ascii=False, indent=2))
-    if result["status"] != "completed":
+    if result["status"] == "blocked":
         raise SystemExit(1)
 
 

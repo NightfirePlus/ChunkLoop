@@ -71,7 +71,7 @@ class Engine:
                 item.status = "pending"
             elif item.status == "reviewing":
                 item.status = "pending_review"
-            if item.status not in {"pending", "pending_review", "passed", "blocked"}:
+            if item.status not in {"pending", "pending_review", "passed", "needs_review", "blocked"}:
                 raise ValueError(f"invalid checkpoint status: {item.status}")
             if item.status == "pending_review" and item.content is None:
                 raise ValueError("checkpoint has review task without content")
@@ -114,10 +114,13 @@ class Engine:
                  rewrite=bool(item.rewrites), evidence_ids=list(block.evidence_ids))
 
         def schedule_ready() -> None:
+            usable = {"passed"}
+            if self.policy.review_gate == "advisory":
+                usable.add("needs_review")
             for block in plan.blocks:
                 item = state.blocks[block.id]
                 if item.status == "pending" and all(
-                    state.blocks[dep].status == "passed" for dep in block.depends_on
+                    state.blocks[dep].status in usable for dep in block.depends_on
                 ):
                     queue_write(block)
 
@@ -172,7 +175,8 @@ class Engine:
                     item.status = "reviewing"
                     review_queue.put_nowait((block.id, item.version, item.content, time.monotonic()))
                     emit("queued_review", block.id, version=item.version, resumed=True)
-            while not all(item.status == "passed" for item in state.blocks.values()):
+            terminal = {"passed", "needs_review"} if self.policy.review_gate == "advisory" else {"passed"}
+            while not all(item.status in terminal for item in state.blocks.values()):
                 schedule_ready()
                 if any(item.status == "blocked" for item in state.blocks.values()):
                     error = "checkpoint contains a blocked block"
@@ -215,11 +219,15 @@ class Engine:
                     emit("rewrite_requested", block_id, version=version,
                          issues=[issue.__dict__ for issue in item.issues])
                 else:
-                    item.status = "blocked"
-                    error = f"{block_id}: review failed after {item.rewrites} rewrites"
-                    emit("blocked", block_id, version=version,
+                    if self.policy.review_gate == "strict":
+                        item.status = "blocked"
+                        error = f"{block_id}: review failed after {item.rewrites} rewrites"
+                        emit("blocked", block_id, version=version,
+                             issues=[issue.__dict__ for issue in item.issues])
+                        break
+                    item.status = "needs_review"
+                    emit("review_needs_attention", block_id, version=version,
                          issues=[issue.__dict__ for issue in item.issues])
-                    break
         finally:
             for worker in workers:
                 worker.cancel()
@@ -239,6 +247,7 @@ class Engine:
             emit("assembly_failed", reason=str(exc))
             metrics["total_seconds"] = time.monotonic() - started
             return RunResult("blocked", state, error=f"assembly failed: {exc}", metrics=metrics)
+        final_review = None
         if self.final_reviewer:
             try:
                 decision = self.final_reviewer(output, context, evidence)
@@ -247,16 +256,24 @@ class Engine:
                                 if self.policy.call_timeout_seconds is not None else await decision)
                 if not isinstance(decision, Review):
                     raise TypeError("final reviewer must return Review")
+                final_review = decision
             except Exception as exc:
                 emit("final_review_error", reason=str(exc))
                 metrics["total_seconds"] = time.monotonic() - started
                 return RunResult("blocked", state, output=output,
                                  error=f"final review error: {exc}", metrics=metrics)
             if not decision.passed:
-                emit("final_review_failed", issues=[issue.__dict__ for issue in decision.issues])
-                metrics["total_seconds"] = time.monotonic() - started
-                return RunResult("blocked", state, output=output,
-                                 error="final review failed", metrics=metrics)
-        emit("completed")
+                if self.policy.review_gate == "strict":
+                    emit("final_review_failed", issues=[issue.__dict__ for issue in decision.issues])
+                    metrics["total_seconds"] = time.monotonic() - started
+                    return RunResult("blocked", state, output=output,
+                                     error="final review failed", metrics=metrics,
+                                     final_review=final_review)
+                emit("final_review_findings", issues=[issue.__dict__ for issue in decision.issues])
+        needs_review = any(item.status == "needs_review" for item in state.blocks.values())
+        needs_review = needs_review or (final_review is not None and not final_review.passed)
+        status = "needs_review" if needs_review else "completed"
+        emit(status)
         metrics["total_seconds"] = time.monotonic() - started
-        return RunResult("completed", state, output=output, metrics=metrics)
+        return RunResult(status, state, output=output, metrics=metrics,
+                         final_review=final_review)

@@ -72,16 +72,18 @@ async def run_case(args, base: str, key: str, configured: str) -> dict:
         report["output"] = result.output
         report["error"] = result.error
         report["metrics"] = result.metrics
+        report["final_review"] = asdict(result.final_review) if result.final_review else None
         report["events"] = result.state.events
         report["block_statuses"] = {block_id: state.status
                                     for block_id, state in result.state.blocks.items()}
-        probe = await ModelReviewer(reviewer_client).review(
-            Block("probe", "仅根据F1核验这句话是否有事实依据", evidence_ids=("F1",)),
-            "ChunkLoop已经自动验证了全部证据来源的真实性，审核绝不会漏检。",
-            context, {"F1": evidence["F7"]},
-        )
-        report["negative_probe"] = {"detected": not probe.passed,
-                                    "issues": [asdict(issue) for issue in probe.issues]}
+        if "F7" in evidence:
+            probe = await ModelReviewer(reviewer_client).review(
+                Block("probe", "仅根据F1核验这句话是否有事实依据", evidence_ids=("F1",)),
+                "ChunkLoop已经自动验证了全部证据来源的真实性，审核绝不会漏检。",
+                context, {"F1": evidence["F7"]},
+            )
+            report["negative_probe"] = {"detected": not probe.passed,
+                                        "issues": [asdict(issue) for issue in probe.issues]}
     except Exception as exc:
         report["result"] = "error"
         report["error"] = f"{type(exc).__name__}: {exc}"
@@ -121,7 +123,8 @@ def main() -> None:
     print(json.dumps({key: report.get(key) for key in
                       ("case", "models", "result", "error", "metrics", "negative_probe",
                        "wall_seconds", "usage")}, ensure_ascii=False, indent=2))
-    if report["result"] != "completed" or not report.get("negative_probe", {}).get("detected"):
+    probe = report.get("negative_probe")
+    if report["result"] not in {"completed", "needs_review"} or (probe and not probe["detected"]):
         raise SystemExit(1)
 
 
