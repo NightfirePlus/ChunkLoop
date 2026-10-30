@@ -1,157 +1,63 @@
-# 华为PC营销软文智能体 v2.0
+# ChunkLoop
 
-**[核心架构规范](docs/core-architecture.md)** · [项目进度](ROADMAP.md) · [运行约定](docs/knowledge-runtime.md) · [部署说明](README_MODELSCOPE.md) · [历史归档](archive/README.md) · [许可证](#许可证)
+ChunkLoop 是一个 Python 分块内容生产引擎。它把一个任务拆成有依赖关系的块，让写作器与审核器分别消费两条队列；审核发现的问题只退回对应块。全部块通过后才合并，并可执行跨块终审。
 
-当前：规范任务说明、统一写作上下文、文章分块规划、生成/重写与审核双队列、事实锁定的整文连贯性编辑、全文终审和内容块级回退均已接入核心 `Pipeline`。知识库运行时完全信任：产品事实按原文取用，营销表达与人群场景参考直接进入写作上下文，知识库阶段不调用模型；保留哈希一致、型号归属、异常尺寸字段和事实冲突等确定性校验，候选修订与人工批准回写仍保留。
+这个仓库由 [ruanwen-agent 的分块多模型流水线提交](https://github.com/NightfirePlus/ruanwen-agent/commit/a6ae1a6ff95733d28804bbc1c8ff5917ec235cea) 演化而来。原来的华为软文业务代码留在 Git 历史中；当前工作树是独立实现。ChunkLoop 不含原项目知识库、品牌素材和网页工作台。
 
-面向华为PC门店与内容运营的自研 Agent。系统通过多轮对话明确目的并形成结构化需求和规范任务说明，匹配产品事实、卖点宣传模板与产品图片，再与门店偏好、按效果权重选出的历史优秀作品共同装配为写作上下文。产品事实与图片来自受控知识库；模板、偏好和历史作品只影响表达，不得作为产品事实。
+## 核心能力
 
-## 目标核心流程
+- **双队列重叠**：写作器生成下一块时，审核器可检查上一块；可配置两类工作者数量。
+- **依赖与证据范围**：块声明依赖和允许使用的证据 ID；依赖通过前不生成，适配器只收到该块允许的证据。
+- **问题回流**：审核器返回结构化 `Issue`；重写次数有上限，超限后阻断合并。
+- **版本与恢复**：每次生成提升块版本；JSON 检查点原子写入，恢复时保留已通过块和待审核内容。
+- **局部重跑**：指定块失效时，自动让它和下游依赖块重跑，其他已通过块复用。
+- **终审与指标**：可接入整份结果审核；输出首块通过时间、总耗时、队列等待、处理耗时和重写次数。
 
-```
-多轮追问 ─▶ 结构化需求 ─▶ 规范任务说明 ─▶ 知识库读取与校验 ─▶ 上下文装配 ─▶ 文章分块规划
-                                                                  │
-                                                                  ▼
-                    ┌─▶ 生成/重写模型 ─▶ 审核队列 ─▶ 审核模型 ──通过──▶ 已通过块
-                    │        ▲                         │
-                    │        └──── 需要重写的块 ───────┘
-                    └──────────── 生成/重写队列
-                                                                  │ 全部块通过
-                                                                  ▼
-                 整文连贯性编辑(不改变事实) ─▶ 全文终审 ─▶ 用户确认
-                                                                  ├─ 修改：按影响范围回退
-                                                                  └─ 确认：归档并多格式下载
-```
+## 快速开始
 
-分块阶段只有两个逻辑角色：生成/重写模型按队列持续生成内容块，审核模型并行消费已生成块；审核未通过的块作为结构化重写任务返回生成/重写队列。设计目的不是把文章机械切开，而是让生成与审核重叠执行，从而缩短总体等待时间。存在上下文依赖的块仍按依赖顺序处理。
+需要 Python 3.10+。本机已在 `.conda/envs/ChunkLoop` 创建独立 Conda 环境。由于本机 `conda.exe` 有 DLL 启动问题，直接调用该环境中的 Python 最稳定：
 
-| 阶段 | 目标方式 | 要点 | 当前状态 |
-|---|---|---|---|
-| 需求澄清 | 模型理解 + 规则确认 | 产品、受众、场景、平台、目标不明确就继续追问 | 已实现，并生成确定性的规范任务说明 |
-| 知识安全 | 运行时完全信任 + 确定性校验 | 产品事实按原文取用，参考直接进入上下文；只保留哈希、型号、尺寸字段与冲突校验 | 已实现哈希一致校验、型号精确归属、异常尺寸剔除、事实冲突阻断，以及候选修订与人工批准回写 |
-| 上下文装配 | 统一数据契约 | 事实、模板、图片、偏好和加权历史作品分权输入 | 已实现 `writing-context-v1`，并持久化到会话供规划、生成与恢复复用 |
-| 分块生产 | 双模型双向队列 | 生成/重写与审核重叠执行，问题块回重写队列 | 已实现块版本、依赖、重写上限、过期结果隔离、阻断与耗时指标；主调度每轮先派发可生成块，正文块不互相依赖以保持并行 |
-| 整文编辑 | 事实锁定编辑 | 只改衔接、指代、语气和重复，不增删改事实 | 已实现；违反段落、事实编号、图片、标签或数字锁时整次编辑作废 |
-| 全文终审 | 规则 + 审核模型 | 检查组合后的事实、夸大、合规、图片与结构 | 已实现；连贯性编辑失败时先回退原始合并稿 |
-| 确认与回退 | 影响范围路由 | 修改时回到最早受影响阶段，只复用仍有效结果 | 已支持产品/策略级回退和指定内容块及其下游依赖回退 |
-| 归档与导出 | 确认后持久化 | 保存审核轨迹，提供发布成品和溯源报告 | 已实现基础能力 |
-
-详细的数据边界、队列状态、知识修订规则和回退矩阵见 [核心架构规范](docs/core-architecture.md)。核心调度在 `agent/pipeline.py`，分块队列在 `agent/chunk_pipeline.py`，继续返回 `need_more_info` / `need_choice` / `blocked` / `review` / `done`。
-
-## 安装与运行
-
-需要 Python 3.10+，先运行 `pip install -r requirements.txt`。
-
-配置可写入项目根目录的 `.env`，也可使用系统环境变量；两者都有时系统环境变量优先。`.env` 已被 `.gitignore` 排除。
-
-| 变量 | 说明 |
-|---|---|
-| `LLM_API_KEY` | 大模型 Key(OpenAI 兼容接口) |
-| `LLM_BASE_URL` | 大模型接口地址,默认阿里云百炼公共端点 |
-| `LLM_MODEL` | 模型名,默认 `qwen-plus` |
-| `LLM_PROFILE` | `llm-multi-v1` 使用 `LLM_API_KEY` 端点的多模型分工；`single` 使用单模型；**未设置时**同时存在 `LLM_API_KEY`、`LLM_BASE_URL` 就自动选择 `llm-multi-v1`，否则退回单模型 |
-| `KB_LOCAL_DIR` | 默认使用 `knowledge_base/current`；可指定当前知识库的实际存储位置 |
-| `PROMPTS_DIR` | 可选，指向另一套提示词目录；默认使用项目内的 `prompts/` |
-
-不要把任何凭证写入代码、README、截图或演示视频。当前知识库随项目上传，令牌、本地配置和运行时审核数据库不提交。
-
-`LLM_PROFILE=llm-multi-v1` 使用 `config/llm_model_routing.json`：Qwen3.8 Flash负责需求理解、修改意图和文章规划；DeepSeek V4.1 Flash负责内容块生成/重写和整文连贯性编辑；GLM-5.2负责逐块审核、连贯性事实锁和全文终审。结构化理解、规划与审核显式关闭思考模式，减少延迟、无关推演和输出截断。图片暂不调用视觉模型，只使用知识库中已登记且绑定精确型号的素材。知识库核验的历史结论与候选修订保存在独立 SQLite 索引中，仅供追溯。
-
-具体物理模型可以调整，但生成/重写与审核两个队列角色、知识核验权限和事实边界保持不变。详见 [核心架构规范](docs/core-architecture.md) 与 [运行约定](docs/knowledge-runtime.md)。
-
-```bash
-python main.py                                  # 多轮对话
-python main.py "给大学新生写一篇 MateBook 14 的小红书"
-python main.py --allow-unfinished-prompts       # 提示词没写完时先跑通其余部分
-python run_tests.py                              # 运行全部测试
-python tools/smoke_models.py --run               # 按当前 LLM_PROFILE 做4阶段真实抽查
-python tools/knowledge_verify.py --list          # 查看历史核验记录
-python tools/knowledge_verify.py --candidates    # 查看待人工批准的知识修订
+```powershell
+& '.\.conda\envs\ChunkLoop\python.exe' -m chunkloop.cli demo --events
+& '.\.conda\envs\ChunkLoop\python.exe' -m unittest discover -s tests -v
+& '.\.conda\envs\ChunkLoop\python.exe' -m benchmarks.compare
 ```
 
-生产部署优先使用固定直接依赖版本：`pip install -r requirements.lock`。仓库同时提供
-`Dockerfile`，容器会以非 root 用户运行，并用离线健康检查验证提示词、知识库、模型配置、
-工作台数据库和运行目录。执行 `docker compose up -d --build` 时，`compose.yaml` 会持久化
-`data/` 和当前知识库目录，避免重建容器后丢失检查点、作品、审核缓存或受控知识更新。
+在其他机器上可以使用 `conda env create -f environment.yml` 创建同名环境。包无运行时第三方依赖。Windows 上运行异步任务需要本机回环套接字可用。
 
-运行保障命令：
+### 使用真实模型
 
-```bash
-python tools/healthcheck.py                      # 不调用模型的健康检查
-python tools/backup_runtime.py                   # 一致性备份工作台与知识审核数据库
+复制 [`examples/basic.json`](examples/basic.json) 并填写任务、证据和块计划。也可省略 `blocks`，由规划模型生成计划；这时还需设置 `CHUNKLOOP_PLANNER_MODEL`。设置 OpenAI 兼容端点的环境变量：
+
+```powershell
+$env:CHUNKLOOP_BASE_URL = 'https://your-endpoint/v1'
+$env:CHUNKLOOP_API_KEY = '<your-key>'
+$env:CHUNKLOOP_WRITER_MODEL = 'writer-model'
+$env:CHUNKLOOP_REVIEWER_MODEL = 'reviewer-model'
+$env:CHUNKLOOP_PLANNER_MODEL = 'planner-model' # 仅自动规划时需要
+& '.\.conda\envs\ChunkLoop\python.exe' -m chunkloop.cli run examples/basic.json --checkpoint data/run.json
 ```
 
-备份默认写入 `data/backups/<时间戳>/`，可用 `BACKUP_DIR` 或 `--output` 指定由外部系统接管的目录。
+中断后加 `--resume`；只重做某块及其下游时加 `--resume --invalidate design`。`--invalidate` 用逗号分隔多个块 ID。修改规格中的指令或证据后加 `--resume --rebase`，它会比较旧检查点的输入清单，只复用未变化的块。通用 `context` 变化会让全部块失效。`--events` 将实时事件以 JSON 行输出到标准错误流。不要将凭证写入规格文件或提交到仓库。模型端点需要支持 `/chat/completions` 和 JSON 对象响应格式。
 
-网页工作台会把创作阶段和内容块状态保存到 `WORKSPACE_DB`。进程中断后点击“恢复中断”，
-系统会把 `generating/reviewing` 的瞬时状态恢复为可调度状态，并从最近安全阶段继续；已通过的
-内容块不会重写。日志默认写入 `data/logs/app.jsonl` 并自动轮转，只记录状态、耗时、请求数和
-token 计量，不保存密钥或提示词。可通过 `ALERT_MAX_TURN_SECONDS`、`ALERT_MAX_REQUESTS`、`ALERT_MAX_TOKENS`、
-`LOG_DIR`、`LOG_MAX_BYTES` 和 `LOG_BACKUP_COUNT` 调整告警与日志策略。
+### 嵌入 Python
 
-每次运行默认把完整记录(含每个阶段的输入输出)保存到本地 `samples/`,用 `--no-save` 关闭。该目录不提交到仓库。
+```python
+import asyncio
+from chunkloop import Block, Engine, Plan
+from chunkloop.demo import DemoWriter, DemoReviewer
 
-## 提示词
-
-以下为当前代码使用的提示词清单。代码里不写任何提示词文字，全部在 `prompts/`，一个环节一个文件，每个文件开头的注释写明可用变量与输出契约。规范任务说明由程序确定性生成，不调用模型。
-
-| 文件 | 阶段 | 使用 `writer_system.md` |
-|---|---|---|
-| `writer_system.md` | 软文写作的系统提示词(手册要求的 8 个模块) | — |
-| `intake.md` | 1 结构化需求 | 否 |
-| `evidence.md` | 2 摘录事实点 | 否 |
-| `image_review.md` | 已停用，保留供以后恢复视觉审核时参考 | 否 |
-| `compose.md` | 4 图文生成 | 是 |
-| `content_plan.md` | 文章分块规划 | 否 |
-| `chunk_generate.md` | 按规划生成单个内容块 | 是 |
-| `chunk_rewrite.md` | 按审核问题重写单个内容块 | 是 |
-| `chunk_review.md` | 逐块事实、夸大与合规审核 | 否 |
-| `coherence.md` | 事实锁定的整文连贯性编辑 | 是 |
-| `coherence_review.md` | 比较编辑前后语义事实是否变化 | 否 |
-| `fact_review.md` | 5 事实核验(LLM 部分) | 否 |
-| `compliance_review.md` | 6 合规检查(LLM 部分) | 否 |
-| `revise_intent.md` | 7 判断修改意图 | 否 |
-| `rewrite.md` | 旧整篇改写兼容入口 | 是 |
-
-- 模板用 `{{变量名}}` 引用程序提供的内容;`<!-- ... -->` 注释发给模型前剥离。
-- 输出 JSON 的字段名是程序读取结果的依据,改文字可以,改字段名要同步改代码。
-- 骨架里带“待补充”的文件视为未完成。默认启动时一次性列出全部未完成项并拒绝启动;`--allow-unfinished-prompts` 下,调用到未就绪环节才报错,事实核验和合规检查的 LLM 部分会明确提示“已跳过”,规则部分照常工作。
-- 平台与场景的具体规则在 `config/*.json`,每次生成自动注入,提示词里不需要重复写。
-
-## 目录
-
-```
-agent/    各阶段与调度器
-config/   scenes.json 场景表 / platforms.json 平台表 / compliance_rules.json 合规词表
-prompts/  全部提示词
-tests/    单元测试(不联网、不使用真实凭证)
-knowledge_base/current/ 唯一运行知识库
-archive/  不参与运行的项目历史记录
-data/     运行时数据(检查点、作品库、日志),不提交
-ROADMAP.md 项目进度与待办
-main.py   命令行入口
+plan = Plan((Block("a", "介绍方案", evidence_ids=("F1",)),
+             Block("b", "总结", depends_on=("a",))))
+result = asyncio.run(Engine(DemoWriter(), DemoReviewer()).run(
+    plan, {"topic": "示例"}, {"F1": "已登记的事实"}))
+print(result.status, result.output)
 ```
 
-## 网页工作台
+接入自己的异步写作器和审核器时，参考 [`chunkloop/engine.py`](chunkloop/engine.py) 中的 `Writer`、`Reviewer` 协议。内容和上下文如需保存到 JSON 检查点，必须可 JSON 序列化。
 
-`python app.py` 启动三栏创作工作台：左侧展示场景判断、事实与配图来源，中间只保留“对话创作 / 最新成果”，右侧展示核验结果与下载入口。历史作品和用户偏好统一挂载在右上角“账户信息”中，不与当前创作工作台混排。真实阶段摘要在当前聊天回复内实时更新，完成后保留为可展开的处理记录。输入框固定在中间底部；产品、人群、场景与目标从框内的“创作设置”向上展开，发布平台可直接选择，统一使用同一个发送入口。通过设置切换产品时会直接触发产品级重跑，不再依赖模型判断修改意图。
+## 设计边界
 
-生成与归档分开处理：未确认前，“最新成果”始终展示当前会话的最新版本；用户明确确认定稿后，系统才把成品写入账户的历史作品库。历史作品可回看、修改或删除，也可持续追加曝光、点赞、分享、咨询、到店与成交数据；删除作品时会级联删除其宣传数据。只有至少一项有效宣传指标大于零的作品才会参与后续软文策略参考，没有记录或只有全零记录的作品不会进入生成上下文。历史作品库提供“允许历史作品参与软文生成参考”开关，关闭后新创作不再读取任何历史作品，只看知识库与本次需求。宣传数据会按效果率、样本可信度及平台/场景/受众/目标/产品相似度计算参考权重；高表现作品优先影响后续内容角度、结构和 CTA，但永远不能作为产品事实、参数或承诺依据。用户偏好按当前账户保存常用语气、平台、重点客群、内容偏好与禁区，并自动用于后续创作。运行时数据默认保存在 `data/marketing_workspace.sqlite3`，也可通过 `WORKSPACE_DB` 指定其他路径；该数据库不会提交到 Git。旧版门店记忆会在首次启动时迁移为当前账户的用户偏好。
+ChunkLoop 管理任务状态和证据分配，不判断证据本身是否可信，也不保证模型审核没有漏检。生产使用时应由调用方提供可信证据、确定性规则和发布前审批。模型适配器只把证据作为数据传入提示词；具体模型的可靠性需要按任务评估。
 
-成品中的配图下方只显示“图一 / 图二……”及必要说明，不再重复图片文件名或来源；图片来源集中展示在左侧知识库依据卡片及内部核验链路中。
-
-稿件通过阻断项检查后，可分别下载发布成品和完整溯源报告，格式包括 Markdown、DOCX 和 PDF。
-
-本地未设置 `PORT` 时，从 7860 起自动选择空闲端口，访问启动日志中显示的地址即可。设置 `PORT` 后会固定使用该端口，适用于创空间部署。
-
-## 已知限制
-
-- 当前库按精确型号读取产品事实，检索相关人群与表达参考；范文、发现卡和历史价格不能升级为当前产品证据。图片暂不执行视觉内容审核，仅依赖登记归属、文件哈希、说明和用途；图片不能作为产品参数或效果依据。
-- 知识库不代替素材授权或人工发布批准；需要人工核验时按治理规则形成候选修订并经批准回写。
-- 运行只使用 `knowledge_base/current`；旧库、旧快照和迁移链已经删除，`archive/` 不参与运行。全量官网事实、素材授权和实际营销效果仍需继续验证。部署时保持知识库目录可持久化。
-
-## 许可证
-
-本项目以 [Apache License 2.0](LICENSE) 发布，允许商业使用、修改与再分发，须保留版权声明与许可证副本，并按第 4 条规定标注修改。许可证不含任何明示或暗示的商标或专利授权；华为及其产品名称归各自权利人所有，本项目与华为公司无隶属关系。
-
-知识库中的产品事实、宣传口径与图片素材来自公开渠道并按要求登记来源；对外发布前仍需自行确认素材授权与品牌方要求，许可证不覆盖第三方素材的再授权。
+详见 [架构与状态契约](docs/architecture.md)、[验证方法](docs/validation.md)。项目代码遵循 [Apache-2.0](LICENSE)；保留原项目历史和许可来源。

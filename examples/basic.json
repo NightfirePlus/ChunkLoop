@@ -1,0 +1,13 @@
+{
+  "context": {"topic": "如何介绍一个可追溯的技术方案", "audience": "开发者"},
+  "evidence": {
+    "F1": "每个内容块有独立的版本号与审核状态",
+    "F2": "生成和审核由两条队列分别处理",
+    "F3": "未通过的块会携带结构化问题返回重写队列"
+  },
+  "blocks": [
+    {"id": "intro", "instruction": "解释问题背景", "evidence_ids": ["F1"]},
+    {"id": "design", "instruction": "介绍流水线设计", "evidence_ids": ["F2", "F3"]},
+    {"id": "end", "instruction": "总结可验证的性质", "depends_on": ["intro", "design"], "evidence_ids": ["F1", "F2"]}
+  ]
+}

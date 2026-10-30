@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=65"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chunkloop"
+version = "0.1.0"
+description = "Evidence-aware, review-driven chunk generation pipeline"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+authors = [{name = "NightfirePlus"}]
+dependencies = []
+
+[project.scripts]
+chunkloop = "chunkloop.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["chunkloop*"]
