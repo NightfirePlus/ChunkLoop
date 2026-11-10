@@ -4,6 +4,8 @@ from __future__ import annotations
 import asyncio
 import inspect
 import time
+from copy import deepcopy
+from dataclasses import asdict
 from datetime import datetime, timezone
 from typing import Any, Callable, Mapping, Protocol
 
@@ -45,6 +47,53 @@ class Engine:
         checkpoint: JsonCheckpoint | None = None, resume: bool = False,
         invalidate: set[str] | None = None, rebase: bool = False,
     ) -> RunResult:
+        """Run bounded document revisions, reusing unaffected block approvals."""
+        started = time.monotonic()
+        result = await self._run_once(plan, context, evidence, checkpoint=checkpoint,
+                                      resume=resume, invalidate=invalidate, rebase=rebase)
+        totals = dict(result.metrics)
+        rounds = 0
+        while (result.final_review and result.final_review.issues and
+               rounds < self.policy.max_final_revisions):
+            findings = result.final_review.issues
+            known = {block.id for block in plan.blocks}
+            # Unknown or unlocalized findings remain visible for human review.
+            if any(not issue.block_ids or not set(issue.block_ids) <= known for issue in findings):
+                break
+            targets = {bid for issue in findings for bid in issue.block_ids}
+            affected = result.state.invalidate(plan, targets)
+            for bid in targets:
+                result.state.blocks[bid].issues = [i for i in findings if bid in i.block_ids]
+            event = {'kind': 'final_revision_requested', 'block_id': '',
+                     'at': datetime.now(timezone.utc).isoformat(),
+                     'round': rounds + 1, 'targets': sorted(targets),
+                     'affected': sorted(affected), 'issues': [asdict(i) for i in findings]}
+            result.state.events.append(event)
+            if checkpoint:
+                checkpoint.save(plan, context, evidence, result.state)
+            if self.on_event:
+                self.on_event(event)
+            previous_output = result.output
+            result = await self._run_once(plan, context, evidence, checkpoint=checkpoint,
+                                          initial_state=result.state)
+            rounds += 1
+            for key, value in result.metrics.items():
+                if key not in {'total_seconds', 'first_passed_seconds'}:
+                    totals[key] = totals.get(key, 0) + value
+            if result.output is None and result.error:
+                result.output = previous_output
+                break
+        totals['final_revisions'] = rounds
+        totals['total_seconds'] = time.monotonic() - started
+        result.metrics = totals
+        return result
+
+    async def _run_once(
+        self, plan: Plan, context: Mapping[str, Any], evidence: Mapping[str, Any], *,
+        checkpoint: JsonCheckpoint | None = None, resume: bool = False,
+        invalidate: set[str] | None = None, rebase: bool = False,
+        initial_state: State | None = None,
+    ) -> RunResult:
         plan.validate()
         available = set(evidence)
         for block in plan.blocks:
@@ -53,7 +102,9 @@ class Engine:
         if rebase and (not resume or checkpoint is None):
             raise ValueError("rebase requires a resumed checkpoint")
         rebase_affected: set[str] = set()
-        if resume and checkpoint:
+        if initial_state is not None:
+            state = initial_state
+        elif resume and checkpoint:
             if rebase:
                 state, rebase_affected = checkpoint.load_rebased(plan, context, evidence)
             else:
@@ -106,6 +157,14 @@ class Engine:
             item = state.blocks[block.id]
             item.version += 1
             item.status = "generating"
+            item.dependencies = {
+                dep: {'content': deepcopy(state.blocks[dep].content),
+                      'version': state.blocks[dep].version,
+                      'status': state.blocks[dep].status,
+                      'issues': [asdict(i) for i in state.blocks[dep].issues],
+                      'uncertain': state.blocks[dep].status == 'needs_review' or
+                                   any(d.get('uncertain', False) for d in state.blocks[dep].dependencies.values())}
+                for dep in block.depends_on}
             serial += 1
             priority = 0 if item.rewrites else 1
             write_queue.put_nowait((priority, serial, block.id, item.version,
@@ -114,6 +173,10 @@ class Engine:
                  rewrite=bool(item.rewrites), evidence_ids=list(block.evidence_ids))
 
         def schedule_ready() -> None:
+            if self.policy.scheduling == 'serial' and any(
+                item.status in {'generating', 'reviewing'} for item in state.blocks.values()
+            ):
+                return
             usable = {"passed"}
             if self.policy.review_gate == "advisory":
                 usable.add("needs_review")
@@ -123,6 +186,8 @@ class Engine:
                     state.blocks[dep].status in usable for dep in block.depends_on
                 ):
                     queue_write(block)
+                    if self.policy.scheduling == 'serial':
+                        return
 
         async def writer_worker() -> None:
             while True:
@@ -130,10 +195,12 @@ class Engine:
                 metrics["writer_queue_wait_seconds"] += time.monotonic() - queued_at
                 block = by_id[block_id]
                 scoped = {key: evidence[key] for key in block.evidence_ids}
-                passed = {dep: state.blocks[dep].content for dep in block.depends_on}
+                snapshot = deepcopy(state.blocks[block_id].dependencies)
+                passed = {dep: data['content'] for dep, data in snapshot.items()}
+                task_context = {**context, 'chunkloop_dependencies': snapshot}
                 began = time.monotonic()
                 try:
-                    call = self.writer.generate(block, context, scoped, passed, feedback)
+                    call = self.writer.generate(block, task_context, scoped, passed, feedback)
                     content = (await asyncio.wait_for(call, self.policy.call_timeout_seconds)
                                if self.policy.call_timeout_seconds is not None else await call)
                     await results.put(("written", block_id, version, content,
@@ -151,7 +218,9 @@ class Engine:
                 scoped = {key: evidence[key] for key in block.evidence_ids}
                 began = time.monotonic()
                 try:
-                    call = self.reviewer.review(block, content, context, scoped)
+                    task_context = {**context, 'chunkloop_dependencies':
+                                    deepcopy(state.blocks[block_id].dependencies)}
+                    call = self.reviewer.review(block, content, task_context, scoped)
                     review = (await asyncio.wait_for(call, self.policy.call_timeout_seconds)
                               if self.policy.call_timeout_seconds is not None else await call)
                     if not isinstance(review, Review):
@@ -212,7 +281,8 @@ class Engine:
                     if metrics["first_passed_seconds"] is None:
                         metrics["first_passed_seconds"] = time.monotonic() - started
                     emit("passed", block_id, version=version)
-                elif item.rewrites < self.policy.max_rewrites:
+                elif (self.policy.max_rewrites is None
+                      or item.rewrites < self.policy.max_rewrites):
                     item.rewrites += 1
                     metrics["rewrites"] += 1
                     item.status = "pending"
@@ -250,7 +320,10 @@ class Engine:
         final_review = None
         if self.final_reviewer:
             try:
-                decision = self.final_reviewer(output, context, evidence)
+                final_context = {**context, 'chunkloop_blocks': {
+                    block.id: {'instruction': block.instruction, **asdict(state.blocks[block.id])}
+                    for block in plan.blocks}}
+                decision = self.final_reviewer(output, final_context, evidence)
                 if inspect.isawaitable(decision):
                     decision = (await asyncio.wait_for(decision, self.policy.call_timeout_seconds)
                                 if self.policy.call_timeout_seconds is not None else await decision)

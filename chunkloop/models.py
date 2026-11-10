@@ -52,6 +52,7 @@ class Issue:
     detail: str
     location: str = ""
     evidence_id: str = ""
+    block_ids: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -65,19 +66,24 @@ class Review:
 
 @dataclass(frozen=True)
 class Policy:
-    max_rewrites: int = 2
+    max_rewrites: int | None = 2
     writer_workers: int = 1
     reviewer_workers: int = 1
     call_timeout_seconds: float | None = None
     review_gate: Literal["advisory", "strict"] = "advisory"
+    max_final_revisions: int = 1
+    scheduling: Literal["overlap", "serial"] = "overlap"
 
     def validate(self) -> None:
-        if self.max_rewrites < 0 or self.writer_workers < 1 or self.reviewer_workers < 1:
+        if ((self.max_rewrites is not None and self.max_rewrites < 0)
+                or self.writer_workers < 1 or self.reviewer_workers < 1):
             raise ValueError("invalid retry or worker count")
         if self.call_timeout_seconds is not None and self.call_timeout_seconds <= 0:
             raise ValueError("call timeout must be positive")
         if self.review_gate not in {"advisory", "strict"}:
             raise ValueError("review gate must be advisory or strict")
+        if self.max_final_revisions < 0 or self.scheduling not in {"overlap", "serial"}:
+            raise ValueError("invalid final revision budget or scheduling mode")
 
 
 @dataclass
@@ -87,6 +93,7 @@ class BlockState:
     rewrites: int = 0
     content: Any = None
     issues: list[Issue] = field(default_factory=list)
+    dependencies: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -119,16 +126,19 @@ class State:
             item.content = None
             item.issues = []
             item.rewrites = 0
+            item.dependencies = {}
         return affected
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> State:
         blocks = {}
         for block_id, raw in data["blocks"].items():
-            issues = [Issue(**issue) for issue in raw.get("issues", [])]
+            issues = [Issue(**{**issue, 'block_ids': tuple(issue.get('block_ids', ()))})
+                      for issue in raw.get("issues", [])]
             blocks[block_id] = BlockState(
                 raw.get("status", "pending"), int(raw.get("version", 0)),
                 int(raw.get("rewrites", 0)), raw.get("content"), issues,
+                raw.get("dependencies", {}),
             )
         return cls(blocks, list(data.get("events", [])))
 

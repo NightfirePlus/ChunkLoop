@@ -1,0 +1,14 @@
+{
+  "date": "2026-11-10",
+  "note": "Post-study source and artifact snapshot; later changes invalidate these hashes. Summarization and default output path were added after generation; generation logic unchanged.",
+  "sha256": {
+    "chunkloop/engine.py": "ca93b164a303e7f7ae7a8d0fb4402f78cf03b34f7d5b67b61e0a2b55f41a6ea9",
+    "chunkloop/models.py": "214f15bdc1004d2298bf2d4f65ba92df2c6538061eb1451eb80da554a86c329f",
+    "chunkloop/adapters.py": "0c7627a484c7989bcf390efe9fbfd28b7f2c4a7e0b83450807ea488287564e5e",
+    "chunkloop/cli.py": "75a235a75ec5a1c8d5b1cfbb8db3f7b92e62902f789e764adf2b077a451a4db4",
+    "tools/study_workflow.py": "9adbb2e571a3213fd14e7a04c7520d25f1572b2c3d21a168dd634f0df9638ae6",
+    "research/workflow-controlled.json": "714050f28dba6722316a332922a09f77e6ddba96e5147fbe3c667e9b0ab7655d",
+    "research/workflow-live.json": "98290b3bc097a3308711e89b7bed960c641e7b05e1328c2bd7d6fbe009809f61"
+  },
+  "hash_scope": "Git blobs after line-ending normalization; use git show HEAD:path rather than Windows working-tree bytes."
+}

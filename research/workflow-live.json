@@ -1,0 +1,1527 @@
+{
+  "kind": "live",
+  "facts": {
+    "a": "维护时间为22:00至22:30",
+    "b": "维护期间文件上传不可用",
+    "c": "维护结束后自动恢复"
+  },
+  "repeats": 2,
+  "delay_seconds": 0.03,
+  "writer_model": "deepseek-v4.1-flash",
+  "reviewer_model": "glm-5.2",
+  "call_budget": 48,
+  "runs": [
+    {
+      "scenario": "independent",
+      "repeat": 0,
+      "arm": "serial",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "serial"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "本次维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 6.4904513999999836,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 2.2020252000002074,
+        "reviewer_seconds": 4.2875018000004275,
+        "writer_queue_wait_seconds": 0.00019530000054146512,
+        "reviewer_queue_wait_seconds": 0.00011790000007749768,
+        "first_passed_seconds": 2.1291442000001553,
+        "total_seconds": 6.490410400000201,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "本次维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {}
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:07.096148+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:07.859567+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:09.225204+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:09.225242+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:10.093918+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:11.335570+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:11.335606+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:11.905839+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:13.586250+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:13.586406+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 815,
+          "completion_tokens": 41
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 706,
+          "completion_tokens": 15
+        }
+      ]
+    },
+    {
+      "scenario": "independent",
+      "repeat": 0,
+      "arm": "overlap",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "overlap"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 5.096608000000288,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 1.9528457999999773,
+        "reviewer_seconds": 4.365143899999566,
+        "writer_queue_wait_seconds": 2.1747346000006473,
+        "reviewer_queue_wait_seconds": 2.6330191000001832,
+        "first_passed_seconds": 1.990455799999836,
+        "total_seconds": 5.096559900000102,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {}
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:13.588808+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:13.588824+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:13.588834+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:14.319859+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:15.032697+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:15.541835+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:15.579197+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:17.628559+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:18.685096+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:18.685239+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 815,
+          "completion_tokens": 40
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 705,
+          "completion_tokens": 15
+        }
+      ]
+    },
+    {
+      "scenario": "independent",
+      "repeat": 1,
+      "arm": "overlap",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "overlap"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 3.8081711999998333,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 2.075424000000112,
+        "reviewer_seconds": 3.067820899999788,
+        "writer_queue_wait_seconds": 2.006716899999901,
+        "reviewer_queue_wait_seconds": 1.3806257000001096,
+        "first_passed_seconds": 1.769285000000309,
+        "total_seconds": 3.8081308999999237,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {}
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:18.686253+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:18.686274+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:18.686286+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:19.426215+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:19.953200+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:20.455475+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:20.761868+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:21.640418+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:22.494135+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:22.494259+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 815,
+          "completion_tokens": 40
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 705,
+          "completion_tokens": 15
+        }
+      ]
+    },
+    {
+      "scenario": "independent",
+      "repeat": 1,
+      "arm": "serial",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "serial"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 5.646363700000165,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 2.188719900000251,
+        "reviewer_seconds": 3.456905800000186,
+        "writer_queue_wait_seconds": 0.0001243000001522887,
+        "reviewer_queue_wait_seconds": 0.00010689999999158317,
+        "first_passed_seconds": 1.7715602999996918,
+        "total_seconds": 5.646325700000034,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {}
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:22.495343+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:23.149084+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:24.266846+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:24.266882+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:24.928514+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:26.176141+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:26.176177+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:27.049751+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:28.141448+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:28.141562+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 815,
+          "completion_tokens": 40
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 705,
+          "completion_tokens": 15
+        }
+      ]
+    },
+    {
+      "scenario": "chain",
+      "repeat": 0,
+      "arm": "serial",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [
+              "a"
+            ],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [
+              "b"
+            ],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "serial"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 5.0825245000000905,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 1.8701367999992726,
+        "reviewer_seconds": 3.2115497999998297,
+        "writer_queue_wait_seconds": 0.00013210000042818137,
+        "reviewer_queue_wait_seconds": 0.00012930000002597808,
+        "first_passed_seconds": 1.9435378999996828,
+        "total_seconds": 5.082484399999885,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {
+              "a": {
+                "content": "维护时间为22:00至22:30。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {
+              "b": {
+                "content": "维护期间文件上传不可用。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:28.142622+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:28.834901+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:30.086089+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:30.086128+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:30.660238+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:31.601593+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:31.601640+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:32.205657+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:33.224860+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:33.224978+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 915,
+          "completion_tokens": 40
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 780,
+          "completion_tokens": 15
+        }
+      ]
+    },
+    {
+      "scenario": "chain",
+      "repeat": 0,
+      "arm": "overlap",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [
+              "a"
+            ],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [
+              "b"
+            ],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "overlap"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 5.4968142000002445,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 1.7803018000004158,
+        "reviewer_seconds": 3.715732200000275,
+        "writer_queue_wait_seconds": 0.00012329999981375295,
+        "reviewer_queue_wait_seconds": 0.00011379999978089472,
+        "first_passed_seconds": 2.235628800000086,
+        "total_seconds": 5.496775100000377,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {
+              "a": {
+                "content": "维护时间为22:00至22:30。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {
+              "b": {
+                "content": "维护期间文件上传不可用。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:33.226141+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:33.785258+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:35.461700+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:35.461735+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:36.088773+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:36.961529+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:36.961569+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:37.555952+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:38.722670+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:38.722791+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 915,
+          "completion_tokens": 40
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 780,
+          "completion_tokens": 15
+        }
+      ]
+    },
+    {
+      "scenario": "chain",
+      "repeat": 1,
+      "arm": "overlap",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [
+              "a"
+            ],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [
+              "b"
+            ],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "overlap"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 4.9041056999999455,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 1.8907797999995637,
+        "reviewer_seconds": 3.0125183000000106,
+        "writer_queue_wait_seconds": 0.00013050000052317046,
+        "reviewer_queue_wait_seconds": 0.00012809999998353305,
+        "first_passed_seconds": 1.9750841000000037,
+        "total_seconds": 4.904063299999962,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {
+              "a": {
+                "content": "维护时间为22:00至22:30。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {
+              "b": {
+                "content": "维护期间文件上传不可用。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:38.723993+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:39.416204+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:40.699014+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:40.699050+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:41.286254+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:42.169215+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:42.169254+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:42.780863+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:43.627811+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:43.627948+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 915,
+          "completion_tokens": 40
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 780,
+          "completion_tokens": 15
+        }
+      ]
+    },
+    {
+      "scenario": "chain",
+      "repeat": 1,
+      "arm": "serial",
+      "plan": {
+        "blocks": [
+          {
+            "id": "a",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护时间为22:00至22:30。",
+            "depends_on": [],
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "id": "b",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护期间文件上传不可用。",
+            "depends_on": [
+              "a"
+            ],
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "id": "c",
+            "instruction": "用一句中文说明以下事实，必须原样包含：维护结束后自动恢复。",
+            "depends_on": [
+              "b"
+            ],
+            "evidence_ids": [
+              "c"
+            ]
+          }
+        ]
+      },
+      "policy": {
+        "max_rewrites": 1,
+        "writer_workers": 1,
+        "reviewer_workers": 1,
+        "call_timeout_seconds": 65,
+        "review_gate": "advisory",
+        "max_final_revisions": 1,
+        "scheduling": "serial"
+      },
+      "status": "completed",
+      "error": "",
+      "output": "维护时间为22:00至22:30。\n维护期间文件上传不可用。\n维护结束后自动恢复。",
+      "required_facts_present": true,
+      "wall_seconds": 5.373287100000198,
+      "metrics": {
+        "written": 3,
+        "reviewed": 3,
+        "rewrites": 0,
+        "writer_seconds": 2.1257165999995777,
+        "reviewer_seconds": 3.2468174999999064,
+        "writer_queue_wait_seconds": 0.00010329999986424809,
+        "reviewer_queue_wait_seconds": 0.00010479999946255703,
+        "first_passed_seconds": 1.6978985000000648,
+        "total_seconds": 5.373248200000035,
+        "final_revisions": 0
+      },
+      "state": {
+        "blocks": {
+          "a": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护时间为22:00至22:30。",
+            "issues": [],
+            "dependencies": {}
+          },
+          "b": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护期间文件上传不可用。",
+            "issues": [],
+            "dependencies": {
+              "a": {
+                "content": "维护时间为22:00至22:30。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          },
+          "c": {
+            "status": "passed",
+            "version": 1,
+            "rewrites": 0,
+            "content": "维护结束后自动恢复。",
+            "issues": [],
+            "dependencies": {
+              "b": {
+                "content": "维护期间文件上传不可用。",
+                "version": 1,
+                "status": "passed",
+                "issues": [],
+                "uncertain": false
+              }
+            }
+          }
+        },
+        "events": [
+          {
+            "kind": "queued_write",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:43.629218+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "a"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:44.359693+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "a",
+            "at": "2026-11-10T02:22:45.327056+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:45.327094+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "b"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:46.132305+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "b",
+            "at": "2026-11-10T02:22:47.162416+00:00",
+            "version": 1
+          },
+          {
+            "kind": "queued_write",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:47.162456+00:00",
+            "version": 1,
+            "rewrite": false,
+            "evidence_ids": [
+              "c"
+            ]
+          },
+          {
+            "kind": "queued_review",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:47.752700+00:00",
+            "version": 1
+          },
+          {
+            "kind": "passed",
+            "block_id": "c",
+            "at": "2026-11-10T02:22:49.002223+00:00",
+            "version": 1
+          },
+          {
+            "kind": "completed",
+            "block_id": "",
+            "at": "2026-11-10T02:22:49.002350+00:00"
+          }
+        ]
+      },
+      "final_review": {
+        "issues": []
+      },
+      "usage": [
+        {
+          "model": "deepseek-v4.1-flash",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 915,
+          "completion_tokens": 40
+        },
+        {
+          "model": "glm-5.2",
+          "calls": 3,
+          "failures": 0,
+          "prompt_tokens": 780,
+          "completion_tokens": 15
+        }
+      ]
+    }
+  ]
+}

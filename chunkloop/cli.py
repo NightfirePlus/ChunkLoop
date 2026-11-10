@@ -9,7 +9,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from .adapters import ChatClient, ModelFinalReviewer, ModelPlanner, ModelReviewer, ModelWriter
-from .demo import DemoReviewer, DemoWriter
+from .demo import DemoReviewer, DemoWriter, default_spec
 from .engine import Engine
 from .models import Block, Plan, Policy
 from .storage import JsonCheckpoint
@@ -27,14 +27,14 @@ def load_spec(path: Path) -> tuple[Plan | None, dict, dict]:
 
 async def execute(args: argparse.Namespace) -> dict:
     if args.command == "demo":
-        spec = args.spec or Path(__file__).resolve().parent.parent / "examples" / "basic.json"
+        spec = args.spec
         writer, reviewer, final = DemoWriter(), DemoReviewer(), None
     else:
         spec = args.spec
         writer = ModelWriter(ChatClient.from_env("writer", timeout=args.call_timeout))
         reviewer = ModelReviewer(ChatClient.from_env("reviewer", timeout=args.call_timeout))
         final = ModelFinalReviewer(ChatClient.from_env("reviewer", timeout=args.call_timeout))
-    plan, context, evidence = load_spec(spec)
+    plan, context, evidence = load_spec(spec) if spec else default_spec()
     checkpoint = JsonCheckpoint(args.checkpoint) if args.checkpoint else None
     if plan is None:
         if args.command == "demo":
@@ -48,6 +48,7 @@ async def execute(args: argparse.Namespace) -> dict:
 
     engine = Engine(writer, reviewer, final_reviewer=final,
                     policy=Policy(call_timeout_seconds=args.call_timeout,
+                                  max_final_revisions=args.final_revisions,
                                   review_gate="strict" if args.strict_review else "advisory"),
                     assembler=lambda parts: "\n\n".join(parts),
                     on_event=event_sink if args.events else None)
@@ -74,6 +75,8 @@ def main() -> None:
     parser.add_argument("--events", action="store_true", help="stream JSON events on stderr")
     parser.add_argument("--strict-review", action="store_true",
                         help="treat unresolved model review findings as blocking")
+    parser.add_argument('--final-revisions', type=int, default=1,
+                        help='maximum targeted whole-document repair rounds; 0 disables repair')
     parser.add_argument("--call-timeout", type=float,
                         help="optional per-model-call timeout in seconds (default: unlimited)")
     args = parser.parse_args()
@@ -87,6 +90,8 @@ def main() -> None:
         parser.error("--rebase requires --resume")
     if args.call_timeout is not None and args.call_timeout <= 0:
         parser.error("--call-timeout must be positive")
+    if args.final_revisions < 0:
+        parser.error('--final-revisions must be nonnegative')
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
         sys.stderr.reconfigure(encoding="utf-8")

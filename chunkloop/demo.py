@@ -4,7 +4,16 @@ from __future__ import annotations
 import asyncio
 from typing import Any, Mapping
 
-from .models import Block, Issue, Review
+from .models import Block, Issue, Plan, Review
+
+
+def default_spec():
+    """Keep the installed CLI demo independent of the source checkout."""
+    return (Plan((Block('intro', '说明块状态', evidence_ids=('F1',)),
+                  Block('design', '说明队列', evidence_ids=('F2',)),
+                  Block('end', '总结', depends_on=('intro', 'design')))),
+            {'topic': '分块生成与审核'},
+            {'F1': '每块有版本号和审核状态', 'F2': '写作与审核分别排队'})
 
 
 class DemoWriter:

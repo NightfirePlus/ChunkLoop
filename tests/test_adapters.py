@@ -1,7 +1,8 @@
 import unittest
 
 from chunkloop import Engine
-from chunkloop.adapters import ModelFinalReviewer, ModelPlanner, ModelReviewer, ModelWriter
+from chunkloop.adapters import (ModelCoherenceReviewer, ModelFinalReviewer,
+                                ModelPlanner, ModelReviewer, ModelWriter)
 
 
 class FakeChatClient:
@@ -21,6 +22,15 @@ class FakeChatClient:
 
 
 class AdapterTests(unittest.IsolatedAsyncioTestCase):
+    async def test_coherence_review_is_read_only_and_scoped(self):
+        client = FakeChatClient()
+        review = await ModelCoherenceReviewer(client)("draft", {"task": "write"}, {})
+        self.assertTrue(review.passed)
+        system, payload = client.calls[0]
+        self.assertIn("Check only the whole document's coherence", system)
+        self.assertIn("Do not revise", system)
+        self.assertNotIn("evidence", payload)
+
     async def test_model_planner_writer_reviewer_and_final_review(self):
         client = FakeChatClient()
         context = {"task": "short explanation"}

@@ -34,6 +34,21 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
     def test_calls_have_no_default_timeout(self):
         self.assertIsNone(Policy().call_timeout_seconds)
 
+    async def test_unlimited_rewrites_can_reach_pass(self):
+        class PassOnFourthReview:
+            def __init__(self):
+                self.calls = 0
+
+            async def review(self, *args):
+                self.calls += 1
+                return Review() if self.calls == 4 else Review((Issue("revise", "try again"),))
+
+        result = await Engine(DemoWriter(0), PassOnFourthReview(),
+                              policy=Policy(max_rewrites=None)).run(
+            Plan((Block("a", "write"),)), {}, {})
+        self.assertEqual(result.status, "completed")
+        self.assertEqual(result.metrics["rewrites"], 3)
+
     async def test_overlap_rewrite_dependency_and_evidence_scope(self):
         plan = Plan((Block("a", "first", evidence_ids=("F1",)),
                      Block("b", "independent", evidence_ids=("F2",)),
@@ -43,6 +58,8 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
             plan, {}, {"F1": "one", "F2": "two"})
         self.assertEqual(result.status, "completed")
         self.assertEqual(result.metrics["rewrites"], 1)
+        self.assertEqual(result.metrics["written"], 4)
+        self.assertEqual(result.metrics["reviewed"], 4)
         self.assertEqual(result.state.blocks["a"].version, 2)
         self.assertEqual(result.state.blocks["c"].status, "passed")
         self.assertEqual(writer.calls[0][1], {"F1"})
@@ -52,6 +69,9 @@ class EngineTests(unittest.IsolatedAsyncioTestCase):
         events = [(e["kind"], e["block_id"]) for e in result.state.events]
         self.assertLess(events.index(("queued_review", "b")),
                         events.index(("rewrite_requested", "a")))
+        rewrite_at = events.index(("rewrite_requested", "a"))
+        self.assertEqual(events[rewrite_at + 1], ("queued_write", "a"))
+        self.assertIn(("queued_review", "a"), events[rewrite_at + 2:])
 
     async def test_review_limit_blocks_and_never_assembles(self):
         class Reject:
